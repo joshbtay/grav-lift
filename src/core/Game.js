@@ -58,8 +58,12 @@ export class Game {
   setupPauseHandling() {
     // Listen for pointer lock changes (ESC exits pointer lock)
     document.addEventListener('pointerlockchange', () => {
-      // If we lost pointer lock while playing, pause the game
-      if (this.currentState === GameState.PLAYING && !document.pointerLockElement) {
+      const isLocked = !!document.pointerLockElement;
+      console.log('pointerlockchange:', { isLocked, currentState: this.currentState });
+
+      // Only react to losing pointer lock while actively playing
+      if (this.currentState === GameState.PLAYING && !isLocked) {
+        console.log('Lost pointer lock during gameplay, pausing');
         this.changeState(GameState.PAUSED);
       }
     });
@@ -70,7 +74,9 @@ export class Game {
         event.preventDefault();
         this.changeState(GameState.PAUSED);
       } else if (event.key === 'Escape' && this.currentState === GameState.PAUSED) {
-        // ESC to resume from pause menu
+        console.log('ESC in pause menu, attempting to resume');
+        // ESC to resume from pause menu - but delay pointer lock request
+        // to avoid the pointerlockchange event firing while state is still changing
         this.changeState(GameState.PLAYING);
       }
     });
@@ -122,8 +128,13 @@ export class Game {
       this.previousState = this.currentState;
       this.currentState = newState;
 
-      // Re-request pointer lock
-      this.canvas.requestPointerLock();
+      // Re-request pointer lock after a brief delay to avoid race condition
+      // with pointerlockchange event
+      setTimeout(() => {
+        if (this.currentState === GameState.PLAYING) {
+          this.canvas.requestPointerLock();
+        }
+      }, 100);
       return;
     }
 
