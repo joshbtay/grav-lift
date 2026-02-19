@@ -59,11 +59,9 @@ export class Game {
     // Listen for pointer lock changes (ESC exits pointer lock)
     document.addEventListener('pointerlockchange', () => {
       const isLocked = !!document.pointerLockElement;
-      console.log('pointerlockchange:', { isLocked, currentState: this.currentState });
 
       // Only react to losing pointer lock while actively playing
       if (this.currentState === GameState.PLAYING && !isLocked) {
-        console.log('Lost pointer lock during gameplay, pausing');
         this.changeState(GameState.PAUSED);
       }
     });
@@ -74,9 +72,7 @@ export class Game {
         event.preventDefault();
         this.changeState(GameState.PAUSED);
       } else if (event.key === 'Escape' && this.currentState === GameState.PAUSED) {
-        console.log('ESC in pause menu, attempting to resume');
-        // ESC to resume from pause menu - but delay pointer lock request
-        // to avoid the pointerlockchange event firing while state is still changing
+        // ESC to resume from pause menu
         this.changeState(GameState.PLAYING);
       }
     });
