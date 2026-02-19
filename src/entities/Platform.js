@@ -12,6 +12,7 @@ export class Platform {
     this.mesh.position.set(this.position.x, this.position.y, this.position.z);
 
     this.rigidBody = null;
+    this.collider = null; // Store collider reference for enabling/disabling
 
     // Track if a player is standing on this platform
     this.attachedPlayer = null;
@@ -34,9 +35,9 @@ export class Platform {
       this.size.width / 2,
       this.size.height / 2,
       this.size.depth / 2
-    ).setFriction(0.7);
+    ).setFriction(0.8); // High friction for natural stopping
 
-    const collider = this.physicsWorld.createCollider(colliderDesc, this.rigidBody);
+    this.collider = this.physicsWorld.createCollider(colliderDesc, this.rigidBody);
   }
 
   createMesh() {
@@ -105,7 +106,7 @@ export class Platform {
         this.size.depth / 2
       ).setFriction(0.7);
 
-      this.physicsWorld.createCollider(colliderDesc, this.rigidBody);
+      this.collider = this.physicsWorld.createCollider(colliderDesc, this.rigidBody);
     }
 
     // Snap player proportionally if they're on this platform

@@ -1,223 +1,227 @@
-import * as THREE from 'three';
-import { LevelSelectMenu } from '../ui/LevelSelectMenu.js';
-import { PauseMenu } from '../ui/PauseMenu.js';
-import { LevelRegistry } from '../levels/LevelRegistry.js';
+import * as THREE from "three";
+import { LevelRegistry } from "../levels/LevelRegistry.js";
+import { LevelSelectMenu } from "../ui/LevelSelectMenu.js";
+import { PauseMenu } from "../ui/PauseMenu.js";
 
 export const GameState = {
-  LEVEL_SELECT: 'LEVEL_SELECT',
-  PLAYING: 'PLAYING',
-  PAUSED: 'PAUSED',
-  GAME_OVER: 'GAME_OVER'
+	LEVEL_SELECT: "LEVEL_SELECT",
+	PLAYING: "PLAYING",
+	PAUSED: "PAUSED",
+	GAME_OVER: "GAME_OVER",
 };
 
 export class Game {
-  constructor(canvas) {
-    this.canvas = canvas;
-    this.currentState = GameState.LEVEL_SELECT;
-    this.previousState = null;
+	constructor(canvas) {
+		this.canvas = canvas;
+		this.currentState = GameState.LEVEL_SELECT;
+		this.previousState = null;
 
-    // Save system - track unlocked levels
-    this.saveData = this.loadSaveData();
+		// Save system - track unlocked levels
+		this.saveData = this.loadSaveData();
 
-    // Three.js setup
-    this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(
-      75,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      1000
-    );
+		// Three.js setup
+		this.scene = new THREE.Scene();
+		this.camera = new THREE.PerspectiveCamera(
+			75,
+			window.innerWidth / window.innerHeight,
+			0.1,
+			1000,
+		);
 
-    this.renderer = new THREE.WebGLRenderer({
-      canvas: this.canvas,
-      antialias: true
-    });
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(window.devicePixelRatio);
-    this.renderer.shadowMap.enabled = true;
+		this.renderer = new THREE.WebGLRenderer({
+			canvas: this.canvas,
+			antialias: true,
+		});
+		this.renderer.setSize(window.innerWidth, window.innerHeight);
+		this.renderer.setPixelRatio(window.devicePixelRatio);
+		this.renderer.shadowMap.enabled = true;
 
-    // Clock for delta time
-    this.clock = new THREE.Clock();
+		// Clock for delta time
+		this.clock = new THREE.Clock();
 
-    // Current menu/level instance
-    this.currentScreen = null;
+		// Current menu/level instance
+		this.currentScreen = null;
 
-    // Store paused level to resume later
-    this.pausedLevel = null;
+		// Store paused level to resume later
+		this.pausedLevel = null;
 
-    // Handle window resize
-    window.addEventListener('resize', () => this.onResize());
+		// Handle window resize
+		window.addEventListener("resize", () => this.onResize());
 
-    // Centralized pause/unpause handling
-    this.setupPauseHandling();
+		// Centralized pause/unpause handling
+		this.setupPauseHandling();
 
-    // Initialize first state
-    this.changeState(GameState.LEVEL_SELECT);
-  }
+		// Initialize first state
+		this.changeState(GameState.LEVEL_SELECT);
+	}
 
-  setupPauseHandling() {
-    // Listen for pointer lock changes (ESC exits pointer lock)
-    document.addEventListener('pointerlockchange', () => {
-      const isLocked = !!document.pointerLockElement;
+	setupPauseHandling() {
+		// Listen for pointer lock changes (ESC exits pointer lock)
+		document.addEventListener("pointerlockchange", () => {
+			const isLocked = !!document.pointerLockElement;
 
-      // Only react to losing pointer lock while actively playing
-      if (this.currentState === GameState.PLAYING && !isLocked) {
-        this.changeState(GameState.PAUSED);
-      }
-    });
+			// Only react to losing pointer lock while actively playing
+			if (this.currentState === GameState.PLAYING && !isLocked) {
+				this.changeState(GameState.PAUSED);
+			}
+		});
 
-    // Listen for ESC in pause menu to resume
-    window.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape' && this.currentState === GameState.PAUSED) {
-        // ESC to resume from pause menu
-        this.changeState(GameState.PLAYING);
-      }
-    });
-  }
+		// Listen for ESC in pause menu to resume
+		window.addEventListener("keydown", (event) => {
+			if (event.key === "Escape" && this.currentState === GameState.PAUSED) {
+				// ESC to resume from pause menu
+				this.changeState(GameState.PLAYING);
+			}
+		});
+	}
 
-  loadSaveData() {
-    const saved = localStorage.getItem('gameProgress');
-    if (saved) {
-      return JSON.parse(saved);
-    }
-    // Default: only level 1 unlocked
-    return {
-      unlockedLevels: 1,
-      completedLevels: [],
-      playerName: '',
-      playerColor: '#fa8072' // Salmon default
-    };
-  }
+	loadSaveData() {
+		const saved = localStorage.getItem("gameProgress");
+		if (saved) {
+			return JSON.parse(saved);
+		}
+		// Default: only level 1 unlocked
+		return {
+			unlockedLevels: 1,
+			completedLevels: [],
+			playerName: "",
+			playerColor: "#fa8072", // Salmon default
+		};
+	}
 
-  saveSaveData() {
-    localStorage.setItem('gameProgress', JSON.stringify(this.saveData));
-  }
+	saveSaveData() {
+		localStorage.setItem("gameProgress", JSON.stringify(this.saveData));
+	}
 
-  unlockLevel(levelNumber) {
-    if (levelNumber > this.saveData.unlockedLevels) {
-      this.saveData.unlockedLevels = levelNumber;
-      this.saveSaveData();
-    }
-  }
+	unlockLevel(levelNumber) {
+		if (levelNumber > this.saveData.unlockedLevels) {
+			this.saveData.unlockedLevels = levelNumber;
+			this.saveSaveData();
+		}
+	}
 
-  updatePlayerName(name) {
-    this.saveData.playerName = name;
-    this.saveSaveData();
-  }
+	updatePlayerName(name) {
+		this.saveData.playerName = name;
+		this.saveSaveData();
+	}
 
-  updatePlayerColor(color) {
-    this.saveData.playerColor = color;
-    this.saveSaveData();
-  }
+	updatePlayerColor(color) {
+		this.saveData.playerColor = color;
+		this.saveSaveData();
+	}
 
-  changeState(newState, data = {}) {
-    console.log(`State change: ${this.currentState} -> ${newState}`);
+	changeState(newState, data = {}) {
+		// Special handling for pause/resume
+		if (
+			this.currentState === GameState.PLAYING &&
+			newState === GameState.PAUSED
+		) {
+			// Store the level without destroying it
+			this.pausedLevel = this.currentScreen;
+			this.currentScreen = new PauseMenu(this);
+			this.previousState = this.currentState;
+			this.currentState = newState;
+			return;
+		}
 
-    // Special handling for pause/resume
-    if (this.currentState === GameState.PLAYING && newState === GameState.PAUSED) {
-      // Store the level without destroying it
-      this.pausedLevel = this.currentScreen;
-      this.currentScreen = new PauseMenu(this);
-      this.previousState = this.currentState;
-      this.currentState = newState;
-      return;
-    }
+		if (
+			this.currentState === GameState.PAUSED &&
+			newState === GameState.PLAYING
+		) {
+			// Resume from pause - destroy pause menu and restore level
+			if (this.currentScreen && this.currentScreen.destroy) {
+				this.currentScreen.destroy();
+			}
+			this.currentScreen = this.pausedLevel;
+			this.pausedLevel = null;
+			this.previousState = this.currentState;
+			this.currentState = newState;
 
-    if (this.currentState === GameState.PAUSED && newState === GameState.PLAYING) {
-      // Resume from pause - destroy pause menu and restore level
-      if (this.currentScreen && this.currentScreen.destroy) {
-        this.currentScreen.destroy();
-      }
-      this.currentScreen = this.pausedLevel;
-      this.pausedLevel = null;
-      this.previousState = this.currentState;
-      this.currentState = newState;
+			// Re-request pointer lock after a brief delay to avoid race condition
+			// with pointerlockchange event
+			setTimeout(() => {
+				if (this.currentState === GameState.PLAYING) {
+					this.canvas.requestPointerLock();
+				}
+			}, 100);
+			return;
+		}
 
-      // Re-request pointer lock after a brief delay to avoid race condition
-      // with pointerlockchange event
-      setTimeout(() => {
-        if (this.currentState === GameState.PLAYING) {
-          this.canvas.requestPointerLock();
-        }
-      }, 100);
-      return;
-    }
+		// Cleanup current screen (normal transitions)
+		if (this.currentScreen && this.currentScreen.destroy) {
+			this.currentScreen.destroy();
+		}
 
-    // Cleanup current screen (normal transitions)
-    if (this.currentScreen && this.currentScreen.destroy) {
-      this.currentScreen.destroy();
-    }
+		// Clear any paused level if we're leaving
+		if (this.pausedLevel) {
+			if (this.pausedLevel.destroy) {
+				this.pausedLevel.destroy();
+			}
+			this.pausedLevel = null;
+		}
 
-    // Clear any paused level if we're leaving
-    if (this.pausedLevel) {
-      if (this.pausedLevel.destroy) {
-        this.pausedLevel.destroy();
-      }
-      this.pausedLevel = null;
-    }
+		this.previousState = this.currentState;
+		this.currentState = newState;
 
-    this.previousState = this.currentState;
-    this.currentState = newState;
+		// Initialize new state
+		switch (newState) {
+			case GameState.LEVEL_SELECT:
+				this.currentScreen = new LevelSelectMenu(this);
+				break;
 
-    // Initialize new state
-    switch (newState) {
-      case GameState.LEVEL_SELECT:
-        this.currentScreen = new LevelSelectMenu(this);
-        break;
+			case GameState.PLAYING:
+				console.log("Starting level:", data.levelNumber);
+				// Load the appropriate level based on levelNumber using the registry
+				this.currentScreen = LevelRegistry.createLevel(data.levelNumber, this);
 
-      case GameState.PLAYING:
-        console.log('Starting level:', data.levelNumber);
-        // Load the appropriate level based on levelNumber using the registry
-        this.currentScreen = LevelRegistry.createLevel(data.levelNumber, this);
+				if (!this.currentScreen) {
+					console.warn(`Level ${data.levelNumber} not implemented yet`);
+					// Fall back to level select
+					this.changeState(GameState.LEVEL_SELECT);
+					return;
+				}
 
-        if (!this.currentScreen) {
-          console.warn(`Level ${data.levelNumber} not implemented yet`);
-          // Fall back to level select
-          this.changeState(GameState.LEVEL_SELECT);
-          return;
-        }
+				// Request pointer lock for gameplay
+				this.canvas.requestPointerLock();
+				break;
 
-        // Request pointer lock for gameplay
-        this.canvas.requestPointerLock();
-        break;
+			case GameState.PAUSED:
+				// Should not reach here with new pause logic
+				this.currentScreen = new PauseMenu(this);
+				break;
 
-      case GameState.PAUSED:
-        // Should not reach here with new pause logic
-        this.currentScreen = new PauseMenu(this);
-        break;
+			case GameState.GAME_OVER:
+				// TODO: Show game over screen
+				break;
+		}
+	}
 
-      case GameState.GAME_OVER:
-        // TODO: Show game over screen
-        break;
-    }
-  }
+	start() {
+		console.log("Game started");
+		this.animate();
+	}
 
-  start() {
-    console.log('Game started');
-    this.animate();
-  }
+	animate() {
+		requestAnimationFrame(() => this.animate());
 
-  animate() {
-    requestAnimationFrame(() => this.animate());
+		const delta = this.clock.getDelta();
 
-    const delta = this.clock.getDelta();
+		// Update current screen/level
+		if (this.currentScreen && this.currentScreen.update) {
+			this.currentScreen.update(delta);
+		}
 
-    // Update current screen/level
-    if (this.currentScreen && this.currentScreen.update) {
-      this.currentScreen.update(delta);
-    }
+		// Render
+		this.renderer.render(this.scene, this.camera);
+	}
 
-    // Render
-    this.renderer.render(this.scene, this.camera);
-  }
+	onResize() {
+		const width = window.innerWidth;
+		const height = window.innerHeight;
 
-  onResize() {
-    const width = window.innerWidth;
-    const height = window.innerHeight;
+		this.camera.aspect = width / height;
+		this.camera.updateProjectionMatrix();
 
-    this.camera.aspect = width / height;
-    this.camera.updateProjectionMatrix();
-
-    this.renderer.setSize(width, height);
-  }
+		this.renderer.setSize(width, height);
+	}
 }
