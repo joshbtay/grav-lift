@@ -20,6 +20,22 @@ export class LevelSelectMenu {
       levelSelectInfo.style.display = 'block';
     }
 
+    // Show player customization panel
+    const customization = document.getElementById('player-customization');
+    if (customization) {
+      customization.style.display = 'block';
+    }
+
+    // Load saved player name and color
+    const nameInput = document.getElementById('player-name');
+    const colorInput = document.getElementById('player-color');
+    if (nameInput) {
+      nameInput.value = this.game.saveData.playerName || '';
+    }
+    if (colorInput) {
+      colorInput.value = this.game.saveData.playerColor || '#fa8072';
+    }
+
     // Clear scene
     this.game.scene.clear();
 
@@ -151,6 +167,25 @@ export class LevelSelectMenu {
       }
     };
 
+    // Player customization inputs
+    const nameInput = document.getElementById('player-name');
+    const colorInput = document.getElementById('player-color');
+
+    this.onNameChange = (event) => {
+      this.game.updatePlayerName(event.target.value);
+    };
+
+    this.onColorChange = (event) => {
+      this.game.updatePlayerColor(event.target.value);
+    };
+
+    if (nameInput) {
+      nameInput.addEventListener('input', this.onNameChange);
+    }
+    if (colorInput) {
+      colorInput.addEventListener('input', this.onColorChange);
+    }
+
     window.addEventListener('mousemove', this.onMouseMove);
     window.addEventListener('click', this.onClick);
   }
@@ -190,6 +225,22 @@ export class LevelSelectMenu {
   }
 
   destroy() {
+    // Remove customization event listeners
+    const nameInput = document.getElementById('player-name');
+    const colorInput = document.getElementById('player-color');
+    if (nameInput) {
+      nameInput.removeEventListener('input', this.onNameChange);
+    }
+    if (colorInput) {
+      colorInput.removeEventListener('input', this.onColorChange);
+    }
+
+    // Hide player customization panel
+    const customization = document.getElementById('player-customization');
+    if (customization) {
+      customization.style.display = 'none';
+    }
+
     window.removeEventListener('mousemove', this.onMouseMove);
     window.removeEventListener('click', this.onClick);
     document.body.style.cursor = 'default';

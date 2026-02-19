@@ -1,0 +1,42 @@
+{
+  "name": "Level 2 - Jump Challenge",
+  "background": {
+    "color": "0x4a5568",
+    "fog": {
+      "color": "0x4a5568",
+      "near": 40,
+      "far": 150
+    }
+  },
+  "playerSpawn": {
+    "x": 0,
+    "y": 1,
+    "z": 0
+  },
+  "platforms": [
+    {
+      "type": "static",
+      "position": { "x": 0, "y": -2, "z": 0 },
+      "size": { "width": 15, "height": 1, "depth": 15 },
+      "color": "0x8b4513"
+    },
+    {
+      "type": "static",
+      "position": { "x": 0, "y": 0, "z": -20 },
+      "size": { "width": 10, "height": 1, "depth": 10 },
+      "color": "0x228b22"
+    },
+    {
+      "type": "static",
+      "position": { "x": 15, "y": 2, "z": -35 },
+      "size": { "width": 12, "height": 1, "depth": 12 },
+      "color": "0x4169e1"
+    },
+    {
+      "type": "static",
+      "position": { "x": 15, "y": 2, "z": -55 },
+      "size": { "width": 20, "height": 1, "depth": 20 },
+      "color": "0xffd700"
+    }
+  ]
+}

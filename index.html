@@ -85,12 +85,68 @@
     #fullscreen-btn:active {
       transform: scale(0.95);
     }
+
+    #player-customization {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 20px;
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      pointer-events: auto;
+      display: none; /* Hidden by default, shown by LevelSelectMenu */
+    }
+
+    #player-customization label {
+      display: block;
+      color: white;
+      margin-bottom: 8px;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    #player-customization input {
+      width: 200px;
+      padding: 8px 12px;
+      margin-bottom: 15px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      font-size: 16px;
+      font-family: 'Arial', sans-serif;
+    }
+
+    #player-customization input:focus {
+      outline: none;
+      border-color: rgba(78, 204, 163, 0.8);
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    #player-customization input[type="color"] {
+      height: 40px;
+      cursor: pointer;
+      padding: 2px;
+    }
+
+    #player-customization input::placeholder {
+      color: rgba(255, 255, 255, 0.5);
+    }
   </style>
 </head>
 <body>
   <canvas id="game-canvas"></canvas>
   <div id="ui-overlay">
     <button id="fullscreen-btn" title="Enter Fullscreen (F)">⛶</button>
+    <div id="player-customization" class="ui-text">
+      <label for="player-name">Player Name</label>
+      <input type="text" id="player-name" placeholder="Enter your name" maxlength="20">
+      <label for="player-color">Player Color</label>
+      <input type="color" id="player-color" value="#fa8072">
+    </div>
     <div id="level-select-info" class="ui-text">
       <h1>SELECT LEVEL</h1>
       <p>Click on a level box to begin</p>

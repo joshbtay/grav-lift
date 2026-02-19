@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { LevelSelectMenu } from '../ui/LevelSelectMenu.js';
 import { PauseMenu } from '../ui/PauseMenu.js';
-import { Level1 } from '../levels/Level1.js';
+import { LevelRegistry } from '../levels/LevelRegistry.js';
 
 export const GameState = {
   LEVEL_SELECT: 'LEVEL_SELECT',
@@ -66,12 +66,9 @@ export class Game {
       }
     });
 
-    // Listen for Tab key to pause
+    // Listen for ESC in pause menu to resume
     window.addEventListener('keydown', (event) => {
-      if (event.key === 'Tab' && this.currentState === GameState.PLAYING) {
-        event.preventDefault();
-        this.changeState(GameState.PAUSED);
-      } else if (event.key === 'Escape' && this.currentState === GameState.PAUSED) {
+      if (event.key === 'Escape' && this.currentState === GameState.PAUSED) {
         // ESC to resume from pause menu
         this.changeState(GameState.PLAYING);
       }
@@ -86,7 +83,9 @@ export class Game {
     // Default: only level 1 unlocked
     return {
       unlockedLevels: 1,
-      completedLevels: []
+      completedLevels: [],
+      playerName: '',
+      playerColor: '#fa8072' // Salmon default
     };
   }
 
@@ -99,6 +98,16 @@ export class Game {
       this.saveData.unlockedLevels = levelNumber;
       this.saveSaveData();
     }
+  }
+
+  updatePlayerName(name) {
+    this.saveData.playerName = name;
+    this.saveSaveData();
+  }
+
+  updatePlayerColor(color) {
+    this.saveData.playerColor = color;
+    this.saveSaveData();
   }
 
   changeState(newState, data = {}) {
@@ -158,16 +167,14 @@ export class Game {
 
       case GameState.PLAYING:
         console.log('Starting level:', data.levelNumber);
-        // Load the appropriate level based on levelNumber
-        switch (data.levelNumber) {
-          case 1:
-            this.currentScreen = new Level1(this);
-            break;
-          default:
-            console.warn(`Level ${data.levelNumber} not implemented yet`);
-            // Fall back to level select
-            this.changeState(GameState.LEVEL_SELECT);
-            break;
+        // Load the appropriate level based on levelNumber using the registry
+        this.currentScreen = LevelRegistry.createLevel(data.levelNumber, this);
+
+        if (!this.currentScreen) {
+          console.warn(`Level ${data.levelNumber} not implemented yet`);
+          // Fall back to level select
+          this.changeState(GameState.LEVEL_SELECT);
+          return;
         }
 
         // Request pointer lock for gameplay
