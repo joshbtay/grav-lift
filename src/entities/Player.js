@@ -38,7 +38,7 @@ export class Player {
 
 		// Shooting
 		this.lastShotTime = 0;
-		this.shotCooldown = 0.1; // 100ms = 10 shots per second
+		this.shotCooldown = 0.4; // 100ms = 10 shots per second
 
 		// Ground detection
 		this.isGrounded = false;
@@ -485,6 +485,15 @@ export class Player {
 			y: direction.y * projectileSpeed,
 			z: direction.z * projectileSpeed,
 		};
+
+		// Apply recoil impulse to player (Newton's third law)
+		const recoilStrength = 3.0; // Adjust this to tune recoil amount
+		const recoilImpulse = {
+			x: -direction.x * recoilStrength,
+			y: -direction.y * recoilStrength,
+			z: -direction.z * recoilStrength,
+		};
+		this.rigidBody.applyImpulse(recoilImpulse, true);
 
 		// Call the callback with spawn data
 		if (onShoot) {

@@ -353,7 +353,7 @@ export class BaseLevel {
 		// We can calculate this from the camera's yaw and pitch
 		const direction = {
 			x: -Math.sin(this.cameraYaw) * Math.cos(this.cameraPitch),
-			y: Math.sin(this.cameraPitch),
+			y: -Math.sin(this.cameraPitch),
 			z: -Math.cos(this.cameraYaw) * Math.cos(this.cameraPitch),
 		};
 
@@ -470,10 +470,37 @@ export class BaseLevel {
 			const offsetY =
 				this.cameraDistance * Math.sin(this.cameraPitch) + this.cameraHeight;
 
+			// Calculate desired camera position
+			const desiredCameraX = this.player.mesh.position.x + offsetX;
+			const desiredCameraY = this.player.mesh.position.y + offsetY;
+			const desiredCameraZ = this.player.mesh.position.z + offsetZ;
+
+			// Raycast downward from camera to find platform below
+			const rayOrigin = { x: desiredCameraX, y: desiredCameraY, z: desiredCameraZ };
+			const rayDirection = { x: 0, y: -1, z: 0 };
+			const maxRayDistance = 1000;
+			const ray = new RAPIER.Ray(rayOrigin, rayDirection);
+
+			const hit = this.physicsWorld.castRay(ray, maxRayDistance, true);
+
+			// Minimum clearance above the platform
+			const minClearance = 0.5;
+			let finalCameraY = desiredCameraY;
+
+			if (hit) {
+				const hitPoint = ray.pointAt(hit.toi); // toi = time of impact
+				const platformTopY = hitPoint.y;
+
+				// Ensure camera stays above the platform
+				if (finalCameraY < platformTopY + minClearance) {
+					finalCameraY = platformTopY + minClearance;
+				}
+			}
+
 			this.game.camera.position.set(
-				this.player.mesh.position.x + offsetX,
-				this.player.mesh.position.y + offsetY,
-				this.player.mesh.position.z + offsetZ,
+				desiredCameraX,
+				finalCameraY,
+				desiredCameraZ,
 			);
 
 			// Look at a point above the player to position player at bottom 20% of screen
