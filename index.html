@@ -135,11 +135,47 @@
     #player-customization input::placeholder {
       color: rgba(255, 255, 255, 0.5);
     }
+
+    #crosshair {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 20px;
+      height: 20px;
+      pointer-events: none;
+      display: none; /* Hidden by default, shown during gameplay */
+    }
+
+    #crosshair::before,
+    #crosshair::after {
+      content: '';
+      position: absolute;
+      background: rgba(255, 255, 255, 0.9);
+      box-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
+    }
+
+    #crosshair::before {
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 2px;
+      height: 12px;
+    }
+
+    #crosshair::after {
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 12px;
+      height: 2px;
+    }
   </style>
 </head>
 <body>
   <canvas id="game-canvas"></canvas>
   <div id="ui-overlay">
+    <div id="crosshair"></div>
     <button id="fullscreen-btn" title="Enter Fullscreen (F)">⛶</button>
     <div id="player-customization" class="ui-text">
       <label for="player-name">Player Name</label>

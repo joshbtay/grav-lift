@@ -22,15 +22,29 @@ export class Player {
 		this.leftBootMesh = null;
 		this.rightBootMesh = null;
 
+		// Store canon mesh for animation
+		this.canonMesh = null;
+		this.canonOriginalPosition = null; // Store original position
+		this.canonRecoilAmount = 0; // Current recoil displacement
+		this.canonRecoilVelocity = 0; // Velocity for spring animation
+
+		// Store leg meshes for animation
+		this.leftLegMesh = null;
+		this.rightLegMesh = null;
+		this.leftLegOriginalRotation = null;
+		this.rightLegOriginalRotation = null;
+		this.walkCycle = 0; // Animation phase for walking
+		this.walkAnimationSpeed = 24.0; // How fast the walk cycle plays
+
 		// Physics
 		this.rigidBody = null;
 		this.collider = null;
 		this.gravityBootsActive = true; // Boots start enabled
 
 		// Movement parameters (velocity-based)
-		this.maxSpeed = 25; // Maximum horizontal speed
-		this.acceleration = 40.0; // How fast we accelerate to max speed
-		this.deceleration = 30.0; // How fast we decelerate when stopping
+		this.maxSpeed = 20; // Maximum horizontal speed
+		this.acceleration = 60.0; // How fast we accelerate to max speed
+		this.deceleration = 50.0; // How fast we decelerate when stopping
 		this.airControl = 0.3; // Reduced control in air (30% of ground control)
 
 		// Movement state
@@ -152,7 +166,7 @@ export class Player {
 		// Only jump if grounded or within coyote time
 		if (!canJump) return;
 
-		const jumpForce = 8.0;
+		const jumpForce = 7.0;
 
 		// Apply upward impulse
 		this.rigidBody.applyImpulse({ x: 0, y: jumpForce, z: 0 }, true);
@@ -215,6 +229,15 @@ export class Player {
 											roughness: 0.6,
 											metalness: 0.5,
 										});
+
+										// Store reference to canon mesh for animation
+										this.canonMesh = child;
+										// Store original position
+										this.canonOriginalPosition = {
+											x: child.position.x,
+											y: child.position.y,
+											z: child.position.z,
+										};
 									} else if (part === "left_boot" || part === "right_boot") {
 										// Boots are gray when ON, pink when OFF
 										child.material = new THREE.MeshStandardMaterial({
@@ -246,6 +269,35 @@ export class Player {
 			});
 
 			await Promise.all(loadPromises);
+
+			// After all models are loaded, parent boots to legs so they move together
+			if (this.parts.left_boot && this.parts.left_leg) {
+				this.mesh.remove(this.parts.left_boot);
+				this.parts.left_leg.add(this.parts.left_boot);
+			}
+			if (this.parts.right_boot && this.parts.right_leg) {
+				this.mesh.remove(this.parts.right_boot);
+				this.parts.right_leg.add(this.parts.right_boot);
+			}
+
+			// Store references to leg scenes for animation (not individual meshes)
+			if (this.parts.left_leg) {
+				this.leftLegMesh = this.parts.left_leg;
+				this.leftLegOriginalRotation = {
+					x: this.parts.left_leg.rotation.x,
+					y: this.parts.left_leg.rotation.y,
+					z: this.parts.left_leg.rotation.z,
+				};
+			}
+			if (this.parts.right_leg) {
+				this.rightLegMesh = this.parts.right_leg;
+				this.rightLegOriginalRotation = {
+					x: this.parts.right_leg.rotation.x,
+					y: this.parts.right_leg.rotation.y,
+					z: this.parts.right_leg.rotation.z,
+				};
+			}
+
 			this.isLoaded = true;
 
 			if (this.onLoad) {
@@ -267,14 +319,121 @@ export class Player {
 	update(delta, cameraYaw, platforms = []) {
 		if (!this.rigidBody) return;
 
+		// Update canon recoil animation (spring physics)
+		if (this.canonRecoilAmount !== 0 || this.canonRecoilVelocity !== 0) {
+			// Spring constants
+			const springStiffness = 180.0; // How fast it returns
+			const springDamping = 12.0; // How much oscillation
+
+			// Spring force towards rest position (0)
+			const springForce = -springStiffness * this.canonRecoilAmount;
+			const dampingForce = -springDamping * this.canonRecoilVelocity;
+
+			// Update velocity and position
+			this.canonRecoilVelocity += (springForce + dampingForce) * delta;
+			this.canonRecoilAmount += this.canonRecoilVelocity * delta;
+
+			// Stop the animation when it's close enough to rest
+			if (
+				Math.abs(this.canonRecoilAmount) < 0.001 &&
+				Math.abs(this.canonRecoilVelocity) < 0.01
+			) {
+				this.canonRecoilAmount = 0;
+				this.canonRecoilVelocity = 0;
+			}
+
+			// Apply recoil to canon mesh
+			if (this.canonMesh && this.canonOriginalPosition) {
+				// The canon recoils backward along its local Z axis (negative = backward)
+				this.canonMesh.position.x = this.canonOriginalPosition.x;
+				this.canonMesh.position.y = this.canonOriginalPosition.y;
+				this.canonMesh.position.z =
+					this.canonOriginalPosition.z + this.canonRecoilAmount;
+			}
+		}
+
 		// Sync mesh position with physics body
 		const position = this.rigidBody.translation();
 
+		// Update leg animation
+		const velocity = this.rigidBody.linvel();
+		const horizontalSpeed = Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
+
+		if (this.leftLegMesh && this.rightLegMesh && this.leftLegOriginalRotation && this.rightLegOriginalRotation) {
+			// Check if grounded (we'll determine this properly below)
+			const tempGrounded = this.checkGrounded();
+
+			if (tempGrounded && horizontalSpeed > 0.5) {
+				// Walking animation - swing legs back and forth
+				this.walkCycle += delta * this.walkAnimationSpeed * (horizontalSpeed / this.maxSpeed);
+
+				// Legs swing in opposite directions
+				const swingAmount = 0.5; // Radians of swing
+				this.leftLegMesh.rotation.x = this.leftLegOriginalRotation.x + Math.sin(this.walkCycle) * swingAmount;
+				this.rightLegMesh.rotation.x = this.rightLegOriginalRotation.x + Math.sin(this.walkCycle + Math.PI) * swingAmount;
+
+				// Return Z rotation to original when walking
+				this.leftLegMesh.rotation.z = this.leftLegOriginalRotation.z;
+				this.rightLegMesh.rotation.z = this.rightLegOriginalRotation.z;
+			} else if (!tempGrounded) {
+				// Jumping/falling animation - splay legs slightly
+				const splayAmount = 0.06; // Radians of outward rotation (subtle)
+				const splaySpeed = 3.0; // How fast to transition
+
+				// Smoothly splay legs outward (swap signs to splay instead of cross)
+				this.leftLegMesh.rotation.z = THREE.MathUtils.lerp(
+					this.leftLegMesh.rotation.z,
+					this.leftLegOriginalRotation.z - splayAmount,
+					delta * splaySpeed
+				);
+				this.rightLegMesh.rotation.z = THREE.MathUtils.lerp(
+					this.rightLegMesh.rotation.z,
+					this.rightLegOriginalRotation.z + splayAmount,
+					delta * splaySpeed
+				);
+
+				// Keep legs slightly forward when jumping
+				const forwardAmount = 0.2;
+				this.leftLegMesh.rotation.x = THREE.MathUtils.lerp(
+					this.leftLegMesh.rotation.x,
+					this.leftLegOriginalRotation.x + forwardAmount,
+					delta * splaySpeed
+				);
+				this.rightLegMesh.rotation.x = THREE.MathUtils.lerp(
+					this.rightLegMesh.rotation.x,
+					this.rightLegOriginalRotation.x + forwardAmount,
+					delta * splaySpeed
+				);
+			} else {
+				// Standing still - return to neutral position
+				const returnSpeed = 5.0;
+				this.leftLegMesh.rotation.x = THREE.MathUtils.lerp(
+					this.leftLegMesh.rotation.x,
+					this.leftLegOriginalRotation.x,
+					delta * returnSpeed
+				);
+				this.rightLegMesh.rotation.x = THREE.MathUtils.lerp(
+					this.rightLegMesh.rotation.x,
+					this.rightLegOriginalRotation.x,
+					delta * returnSpeed
+				);
+				this.leftLegMesh.rotation.z = THREE.MathUtils.lerp(
+					this.leftLegMesh.rotation.z,
+					this.leftLegOriginalRotation.z,
+					delta * returnSpeed
+				);
+				this.rightLegMesh.rotation.z = THREE.MathUtils.lerp(
+					this.rightLegMesh.rotation.z,
+					this.rightLegOriginalRotation.z,
+					delta * returnSpeed
+				);
+			}
+		}
+
 		// The mesh should be positioned so the player model's feet align with the capsule bottom
-		// The capsule center is at position.y, and the bottom is at position.y - 0.8
-		// We need to figure out where the model's origin is relative to the feet
-		// For now, let's try no offset and see where the model appears
-		this.mesh.position.set(position.x, position.y, position.z);
+		// Raise the mesh slightly so boots don't sink into the ground
+		const meshYOffset = 0.2; // Small lift to keep boots above ground
+		this.mesh.position.set(position.x, position.y + meshYOffset, position.z);
 
 		// Rotate player mesh to face camera direction (third-person shooter style)
 		this.mesh.rotation.y = cameraYaw;
@@ -302,7 +461,7 @@ export class Player {
 		}
 
 		// Apply movement forces based on camera direction
-		const velocity = this.rigidBody.linvel();
+		// velocity is already declared above for leg animation
 
 		// Debug logging every 10 frames (~6 times per second)
 		if (!this._movementLogCount) this._movementLogCount = 0;
@@ -494,6 +653,9 @@ export class Player {
 			z: -direction.z * recoilStrength,
 		};
 		this.rigidBody.applyImpulse(recoilImpulse, true);
+
+		// Trigger canon recoil animation
+		this.canonRecoilVelocity = -8.0; // Initial recoil velocity
 
 		// Call the callback with spawn data
 		if (onShoot) {

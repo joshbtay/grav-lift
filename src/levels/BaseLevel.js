@@ -53,6 +53,12 @@ export class BaseLevel {
 			levelSelectInfo.style.display = "none";
 		}
 
+		// Show crosshair during gameplay
+		const crosshair = document.getElementById("crosshair");
+		if (crosshair) {
+			crosshair.style.display = "block";
+		}
+
 		// Clear scene - THIS REMOVES EVERYTHING INCLUDING THE PLAYER!
 		this.game.scene.clear();
 
@@ -421,34 +427,20 @@ export class BaseLevel {
 			const halfDepth = platform.size.depth / 2;
 			const dx = Math.abs(playerPos.x - platformPos.x);
 			const dz = Math.abs(playerPos.z - platformPos.z);
-			const isWithinBounds = dx <= halfWidth + playerRadius && dz <= halfDepth + playerRadius;
+			const isWithinBounds =
+				dx <= halfWidth + playerRadius && dz <= halfDepth + playerRadius;
 
 			// Only disable collision (make sensor) if:
 			// 1. Player is clearly BELOW the platform, OR
 			// 2. Player is moving UP through it
 			const isClearlyBelow = playerBottom < platformTop - 0.5;
 			const isMovingUp = playerVel.y > 0.5;
-			const shouldPassThrough = isWithinBounds && (isClearlyBelow || isMovingUp);
+			const shouldPassThrough =
+				isWithinBounds && (isClearlyBelow || isMovingUp);
 
 			// Default to solid (safer for preventing tunneling)
 			const shouldBeSensor = shouldPassThrough;
 
-			// Log for first platform every 30 frames
-			if (idx === 0 && this._platformDebugCounter % 30 === 0) {
-				console.log('=== Platform Collision Debug ===');
-				console.log('Player pos Y: ' + playerPos.y.toFixed(3));
-				console.log('Player bottom Y: ' + playerBottom.toFixed(3));
-				console.log('Player vel Y: ' + playerVel.y.toFixed(3));
-				console.log('Platform top Y: ' + platformTop.toFixed(3));
-				console.log('isWithinBounds: ' + isWithinBounds);
-				console.log('isClearlyBelow: ' + isClearlyBelow + ' (playerBottom < platformTop - 0.5)');
-				console.log('isMovingUp: ' + isMovingUp + ' (vel.y > 0.5)');
-				console.log('shouldBeSensor: ' + shouldBeSensor);
-				console.log('isSensor: ' + platform.collider.isSensor());
-				console.log('');
-			}
-
-			// Set as sensor (no collision) or solid based on whether player should pass through
 			platform.collider.setSensor(shouldBeSensor);
 		});
 	}
@@ -458,7 +450,7 @@ export class BaseLevel {
 	 */
 	updateCamera() {
 		if (this.player) {
-			// Calculate camera position based on yaw and pitch
+			// Calculate camera offset based on yaw and pitch
 			const offsetX =
 				this.cameraDistance *
 				Math.sin(this.cameraYaw) *
@@ -470,41 +462,58 @@ export class BaseLevel {
 			const offsetY =
 				this.cameraDistance * Math.sin(this.cameraPitch) + this.cameraHeight;
 
-			// Calculate desired camera position
-			const desiredCameraX = this.player.mesh.position.x + offsetX;
-			const desiredCameraY = this.player.mesh.position.y + offsetY;
-			const desiredCameraZ = this.player.mesh.position.z + offsetZ;
+			// Camera pivot point (slightly above player center)
+			const pivotX = this.player.mesh.position.x;
+			const pivotY = this.player.mesh.position.y + this.cameraHeight;
+			const pivotZ = this.player.mesh.position.z;
 
-			// Raycast downward from camera to find platform below
-			const rayOrigin = { x: desiredCameraX, y: desiredCameraY, z: desiredCameraZ };
-			const rayDirection = { x: 0, y: -1, z: 0 };
-			const maxRayDistance = 1000;
+			// Desired camera position
+			const desiredCameraX = pivotX + offsetX;
+			const desiredCameraY =
+				pivotY + this.cameraDistance * Math.sin(this.cameraPitch);
+			const desiredCameraZ = pivotZ + offsetZ;
+
+			// Raycast from pivot point toward camera to detect obstacles
+			const dirX = desiredCameraX - pivotX;
+			const dirY = desiredCameraY - pivotY;
+			const dirZ = desiredCameraZ - pivotZ;
+			const distance = Math.sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ);
+
+			// Normalize direction
+			const rayDirection = {
+				x: dirX / distance,
+				y: dirY / distance,
+				z: dirZ / distance,
+			};
+
+			const rayOrigin = { x: pivotX, y: pivotY, z: pivotZ };
 			const ray = new RAPIER.Ray(rayOrigin, rayDirection);
 
-			const hit = this.physicsWorld.castRay(ray, maxRayDistance, true);
+			// Cast ray to check for obstacles, excluding the player
+			const hit = this.physicsWorld.castRay(ray, distance, true);
 
-			// Minimum clearance above the platform
-			const minClearance = 0.5;
+			let finalCameraX = desiredCameraX;
 			let finalCameraY = desiredCameraY;
+			let finalCameraZ = desiredCameraZ;
 
-			if (hit) {
-				const hitPoint = ray.pointAt(hit.toi); // toi = time of impact
-				const platformTopY = hitPoint.y;
-
-				// Ensure camera stays above the platform
-				if (finalCameraY < platformTopY + minClearance) {
-					finalCameraY = platformTopY + minClearance;
+			if (hit && hit.collider !== this.player.collider) {
+				// Obstacle found - place camera just before the hit point
+				const safeDistance = hit.toi - 0.2; // 0.2 unit buffer
+				if (safeDistance > 0) {
+					finalCameraX = pivotX + rayDirection.x * safeDistance;
+					finalCameraY = pivotY + rayDirection.y * safeDistance;
+					finalCameraZ = pivotZ + rayDirection.z * safeDistance;
+				} else {
+					// Very close to obstacle, place camera at pivot
+					finalCameraX = pivotX;
+					finalCameraY = pivotY;
+					finalCameraZ = pivotZ;
 				}
 			}
 
-			this.game.camera.position.set(
-				desiredCameraX,
-				finalCameraY,
-				desiredCameraZ,
-			);
+			this.game.camera.position.set(finalCameraX, finalCameraY, finalCameraZ);
 
-			// Look at a point above the player to position player at bottom 20% of screen
-			// The center of the screen (crosshair) is where the cannon aims
+			// Look at a point above the player
 			this.game.camera.lookAt(
 				this.player.mesh.position.x,
 				this.player.mesh.position.y + this.aimHeight,
@@ -514,6 +523,12 @@ export class BaseLevel {
 	}
 
 	destroy() {
+		// Hide crosshair when leaving gameplay
+		const crosshair = document.getElementById("crosshair");
+		if (crosshair) {
+			crosshair.style.display = "none";
+		}
+
 		// Clean up event listeners
 		document.removeEventListener("mousemove", this.onMouseMove);
 		document.removeEventListener("keydown", this.onKeyDown);

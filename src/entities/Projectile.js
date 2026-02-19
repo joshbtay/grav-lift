@@ -44,7 +44,7 @@ export class Projectile {
 
 		this.rigidBody = this.physicsWorld.createRigidBody(rigidBodyDesc);
 
-		this.rigidBody.setGravityScale(8.0, true);
+		this.rigidBody.setGravityScale(12.0, true);
 
 		const colliderDesc = RAPIER.ColliderDesc.ball(this.radius)
 			.setFriction(0.5)
