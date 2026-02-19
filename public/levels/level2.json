@@ -1,11 +1,11 @@
 {
   "name": "Level 2 - Jump Challenge",
   "background": {
-    "color": "0x4a5568",
+    "color": "0x1a0a2e",
     "fog": {
-      "color": "0x4a5568",
-      "near": 40,
-      "far": 150
+      "color": "0x1a0a2e",
+      "near": 50,
+      "far": 300
     }
   },
   "playerSpawn": {

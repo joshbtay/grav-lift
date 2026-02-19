@@ -26,11 +26,16 @@ const CONFIG = {
   // Course length (rows of platforms)
   numberOfRows: 12,
 
-  // Platform sizes
+  // Platform sizes - much more variation
   platformSizes: [
-    { width: 5, height: 1, depth: 5 },
-    { width: 6, height: 1, depth: 6 },
+    { width: 3, height: 1, depth: 3 },
     { width: 4, height: 1, depth: 4 },
+    { width: 4.5, height: 1, depth: 4.5 },
+    { width: 5, height: 1, depth: 5 },
+    { width: 5.5, height: 1, depth: 5.5 },
+    { width: 6, height: 1, depth: 6 },
+    { width: 7, height: 1, depth: 7 },
+    { width: 8, height: 1, depth: 8 },
   ],
 
   // Color palette for the level
@@ -168,9 +173,8 @@ function generatePlatforms() {
     // Add curved path variation for this row
     const curveOffset = Math.sin(row * 0.5) * 15;
 
-    // Slight vertical variation for this row
-    const heightVariation = Math.sin(row * 0.3) * 1.5;
-    const baseY = 0 + heightVariation;
+    // Base vertical variation for this row
+    const baseHeightVariation = Math.sin(row * 0.3) * 2;
 
     // Calculate grid positions for this row (centered around curve offset)
     const gridPositions = [];
@@ -183,9 +187,13 @@ function generatePlatforms() {
     for (let col = 0; col < CONFIG.gridWidth; col++) {
       const x = gridPositions[col];
 
-      // Add slight randomness to position
-      const xJitter = random(-1, 1);
-      const yJitter = random(-0.5, 0.5);
+      // Add much more randomness to position
+      const xJitter = random(-2, 2);
+
+      // Much more vertical variation - each platform can be significantly higher or lower
+      const colHeightVariation = random(-4, 4);  // Large per-platform variation
+      const yJitter = random(-1, 1);  // Additional small randomness
+      const y = baseHeightVariation + colHeightVariation + yJitter;
 
       // Choose platform size
       const size = randomChoice(CONFIG.platformSizes);
@@ -198,7 +206,7 @@ function generatePlatforms() {
         type: isMoving ? 'moving' : 'static',
         position: {
           x: Math.round((x + xJitter) * 10) / 10,
-          y: Math.round((baseY + yJitter) * 10) / 10,
+          y: Math.round(y * 10) / 10,
           z: Math.round(currentZ * 10) / 10,
         },
         size: { ...size },
@@ -208,6 +216,21 @@ function generatePlatforms() {
       // Add states if it's a moving platform
       if (isMoving) {
         platform.states = generateStates(colorOnly);
+      }
+
+      // Add turret to ~75% of static platforms and ~60% of color-only platforms
+      const shouldHaveTurret = (!isMoving && Math.random() < 0.75) ||
+                               (isMoving && colorOnly && Math.random() < 0.6);
+
+      if (shouldHaveTurret) {
+        platform.turret = {
+          position: {
+            x: 0,  // Relative to platform center
+            y: size.height / 2 + 0.3,  // On top of platform
+            z: 0
+          },
+          color: '0xff0000'
+        };
       }
 
       platforms.push(platform);

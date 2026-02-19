@@ -68,7 +68,9 @@ export class DataDrivenLevel extends BaseLevel {
 			return;
 		}
 
-		this.platforms = LevelDataLoader.createPlatformsFromData(this.levelData);
+		const result = LevelDataLoader.createPlatformsFromData(this.levelData, this.physicsWorld);
+		this.platforms = result.platforms;
+		this.turrets = result.turrets;
 	}
 
 	/**

@@ -166,7 +166,7 @@ export class Player {
 		// Only jump if grounded or within coyote time
 		if (!canJump) return;
 
-		const jumpForce = 7.0;
+		const jumpForce = 8.0;
 
 		// Apply upward impulse
 		this.rigidBody.applyImpulse({ x: 0, y: jumpForce, z: 0 }, true);
@@ -357,20 +357,32 @@ export class Player {
 
 		// Update leg animation
 		const velocity = this.rigidBody.linvel();
-		const horizontalSpeed = Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
+		const horizontalSpeed = Math.sqrt(
+			velocity.x * velocity.x + velocity.z * velocity.z,
+		);
 
-		if (this.leftLegMesh && this.rightLegMesh && this.leftLegOriginalRotation && this.rightLegOriginalRotation) {
+		if (
+			this.leftLegMesh &&
+			this.rightLegMesh &&
+			this.leftLegOriginalRotation &&
+			this.rightLegOriginalRotation
+		) {
 			// Check if grounded (we'll determine this properly below)
 			const tempGrounded = this.checkGrounded();
 
 			if (tempGrounded && horizontalSpeed > 0.5) {
 				// Walking animation - swing legs back and forth
-				this.walkCycle += delta * this.walkAnimationSpeed * (horizontalSpeed / this.maxSpeed);
+				this.walkCycle +=
+					delta * this.walkAnimationSpeed * (horizontalSpeed / this.maxSpeed);
 
 				// Legs swing in opposite directions
 				const swingAmount = 0.5; // Radians of swing
-				this.leftLegMesh.rotation.x = this.leftLegOriginalRotation.x + Math.sin(this.walkCycle) * swingAmount;
-				this.rightLegMesh.rotation.x = this.rightLegOriginalRotation.x + Math.sin(this.walkCycle + Math.PI) * swingAmount;
+				this.leftLegMesh.rotation.x =
+					this.leftLegOriginalRotation.x +
+					Math.sin(this.walkCycle) * swingAmount;
+				this.rightLegMesh.rotation.x =
+					this.rightLegOriginalRotation.x +
+					Math.sin(this.walkCycle + Math.PI) * swingAmount;
 
 				// Return Z rotation to original when walking
 				this.leftLegMesh.rotation.z = this.leftLegOriginalRotation.z;
@@ -384,12 +396,12 @@ export class Player {
 				this.leftLegMesh.rotation.z = THREE.MathUtils.lerp(
 					this.leftLegMesh.rotation.z,
 					this.leftLegOriginalRotation.z - splayAmount,
-					delta * splaySpeed
+					delta * splaySpeed,
 				);
 				this.rightLegMesh.rotation.z = THREE.MathUtils.lerp(
 					this.rightLegMesh.rotation.z,
 					this.rightLegOriginalRotation.z + splayAmount,
-					delta * splaySpeed
+					delta * splaySpeed,
 				);
 
 				// Keep legs slightly forward when jumping
@@ -397,12 +409,12 @@ export class Player {
 				this.leftLegMesh.rotation.x = THREE.MathUtils.lerp(
 					this.leftLegMesh.rotation.x,
 					this.leftLegOriginalRotation.x + forwardAmount,
-					delta * splaySpeed
+					delta * splaySpeed,
 				);
 				this.rightLegMesh.rotation.x = THREE.MathUtils.lerp(
 					this.rightLegMesh.rotation.x,
 					this.rightLegOriginalRotation.x + forwardAmount,
-					delta * splaySpeed
+					delta * splaySpeed,
 				);
 			} else {
 				// Standing still - return to neutral position
@@ -410,22 +422,22 @@ export class Player {
 				this.leftLegMesh.rotation.x = THREE.MathUtils.lerp(
 					this.leftLegMesh.rotation.x,
 					this.leftLegOriginalRotation.x,
-					delta * returnSpeed
+					delta * returnSpeed,
 				);
 				this.rightLegMesh.rotation.x = THREE.MathUtils.lerp(
 					this.rightLegMesh.rotation.x,
 					this.rightLegOriginalRotation.x,
-					delta * returnSpeed
+					delta * returnSpeed,
 				);
 				this.leftLegMesh.rotation.z = THREE.MathUtils.lerp(
 					this.leftLegMesh.rotation.z,
 					this.leftLegOriginalRotation.z,
-					delta * returnSpeed
+					delta * returnSpeed,
 				);
 				this.rightLegMesh.rotation.z = THREE.MathUtils.lerp(
 					this.rightLegMesh.rotation.z,
 					this.rightLegOriginalRotation.z,
-					delta * returnSpeed
+					delta * returnSpeed,
 				);
 			}
 		}

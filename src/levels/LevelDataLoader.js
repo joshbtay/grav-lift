@@ -1,5 +1,6 @@
 import { Platform } from '../entities/Platform.js';
 import { MovingPlatform } from '../entities/MovingPlatform.js';
+import { Turret } from '../entities/Turret.js';
 
 /**
  * Utility class for loading and parsing level data from JSON files.
@@ -77,20 +78,63 @@ export class LevelDataLoader {
   /**
    * Create all platforms from level data.
    * @param {Object} levelData - The level data object
-   * @returns {Array<Platform>} Array of platform instances
+   * @param {Object} physicsWorld - The physics world for creating turrets
+   * @returns {Object} Object with platforms and turrets arrays
    */
-  static createPlatformsFromData(levelData) {
+  static createPlatformsFromData(levelData, physicsWorld = null) {
     if (!levelData.platforms || !Array.isArray(levelData.platforms)) {
       console.warn('Level data has no platforms array');
-      return [];
+      return { platforms: [], turrets: [] };
     }
 
     const bpm = this.getBPM(levelData);
     const colorPalette = this.getColorPalette(levelData);
 
-    return levelData.platforms.map(platformData =>
-      this.createPlatform(platformData, bpm, colorPalette)
-    );
+    const platforms = [];
+    const turrets = [];
+
+    levelData.platforms.forEach(platformData => {
+      const platform = this.createPlatform(platformData, bpm, colorPalette);
+      platforms.push(platform);
+
+      // Create turret if platform has one
+      if (platformData.turret && physicsWorld) {
+        const turret = this.createTurret(platformData, platform, physicsWorld);
+        if (turret) {
+          turrets.push(turret);
+        }
+      }
+    });
+
+    return { platforms, turrets };
+  }
+
+  /**
+   * Create a turret instance from platform data.
+   * @param {Object} platformData - Platform configuration from JSON
+   * @param {Platform} platform - The platform this turret is on
+   * @param {Object} physicsWorld - The physics world
+   * @returns {Turret|null} Turret instance or null
+   */
+  static createTurret(platformData, platform, physicsWorld) {
+    if (!platformData.turret || !physicsWorld) {
+      return null;
+    }
+
+    const turretData = platformData.turret;
+
+    // Calculate absolute position (platform position + relative turret position)
+    const position = {
+      x: platform.position.x + (turretData.position?.x || 0),
+      y: platform.position.y + (turretData.position?.y || 1),
+      z: platform.position.z + (turretData.position?.z || 0),
+    };
+
+    return new Turret({
+      position,
+      physicsWorld,
+      color: this.parseColor(turretData.color || '0xff0000'),
+    });
   }
 
   /**

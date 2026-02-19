@@ -2,12 +2,16 @@ import * as THREE from "three";
 import { LevelRegistry } from "../levels/LevelRegistry.js";
 import { LevelSelectMenu } from "../ui/LevelSelectMenu.js";
 import { PauseMenu } from "../ui/PauseMenu.js";
+import { GameOverMenu } from "../ui/GameOverMenu.js";
+import { WinMenu } from "../ui/WinMenu.js";
+import { SoundManager } from "../audio/SoundManager.js";
 
 export const GameState = {
 	LEVEL_SELECT: "LEVEL_SELECT",
 	PLAYING: "PLAYING",
 	PAUSED: "PAUSED",
 	GAME_OVER: "GAME_OVER",
+	WIN: "WIN",
 };
 
 export class Game {
@@ -36,6 +40,14 @@ export class Game {
 		this.renderer.setPixelRatio(window.devicePixelRatio);
 		this.renderer.shadowMap.enabled = true;
 
+		// Audio setup
+		this.audioListener = new THREE.AudioListener();
+		this.camera.add(this.audioListener);
+		this.soundManager = new SoundManager(this.audioListener);
+
+		// Load sounds
+		this.loadSounds();
+
 		// Clock for delta time
 		this.clock = new THREE.Clock();
 
@@ -44,6 +56,9 @@ export class Game {
 
 		// Store paused level to resume later
 		this.pausedLevel = null;
+
+		// Track current level number for retry
+		this.currentLevelNumber = null;
 
 		// Handle window resize
 		window.addEventListener("resize", () => this.onResize());
@@ -73,6 +88,15 @@ export class Game {
 				this.changeState(GameState.PLAYING);
 			}
 		});
+	}
+
+	async loadSounds() {
+		try {
+			await this.soundManager.loadSound('projectile', '/assets/projectile.mp3');
+			await this.soundManager.loadSound('music', '/assets/song.mp3');
+		} catch (error) {
+			console.error('Error loading sounds:', error);
+		}
 	}
 
 	loadSaveData() {
@@ -121,6 +145,11 @@ export class Game {
 			this.currentScreen = new PauseMenu(this);
 			this.previousState = this.currentState;
 			this.currentState = newState;
+
+			// Pause background music
+			if (this.soundManager) {
+				this.soundManager.pauseBackgroundMusic();
+			}
 			return;
 		}
 
@@ -136,6 +165,11 @@ export class Game {
 			this.pausedLevel = null;
 			this.previousState = this.currentState;
 			this.currentState = newState;
+
+			// Resume background music
+			if (this.soundManager) {
+				this.soundManager.resumeBackgroundMusic();
+			}
 
 			// Re-request pointer lock after a brief delay to avoid race condition
 			// with pointerlockchange event
@@ -167,15 +201,28 @@ export class Game {
 		switch (newState) {
 			case GameState.LEVEL_SELECT:
 				this.currentScreen = new LevelSelectMenu(this);
+				this.currentLevelNumber = null;
+
+				// Stop any music when returning to level select
+				if (this.soundManager) {
+					this.soundManager.stopBackgroundMusic();
+				}
 				break;
 
 			case GameState.PLAYING:
-				console.log("Starting level:", data.levelNumber);
+				// If we have a level number in data, use it (starting new level)
+				// Otherwise use currentLevelNumber (retrying after game over)
+				const levelNumber = data.levelNumber || this.currentLevelNumber;
+				console.log("Starting level:", levelNumber);
+
+				// Store level number for retry
+				this.currentLevelNumber = levelNumber;
+
 				// Load the appropriate level based on levelNumber using the registry
-				this.currentScreen = LevelRegistry.createLevel(data.levelNumber, this);
+				this.currentScreen = LevelRegistry.createLevel(levelNumber, this);
 
 				if (!this.currentScreen) {
-					console.warn(`Level ${data.levelNumber} not implemented yet`);
+					console.warn(`Level ${levelNumber} not implemented yet`);
 					// Fall back to level select
 					this.changeState(GameState.LEVEL_SELECT);
 					return;
@@ -183,17 +230,65 @@ export class Game {
 
 				// Request pointer lock for gameplay
 				this.canvas.requestPointerLock();
+
+				// Handle music based on previous state
+				if (this.soundManager) {
+					if (this.previousState === GameState.GAME_OVER) {
+						// Resume music if retrying after game over
+						this.soundManager.resumeBackgroundMusic();
+					} else {
+						// Start fresh music for new level
+						this.soundManager.playBackgroundMusic('music', 0.3, true);
+					}
+				}
 				break;
 
 			case GameState.PAUSED:
 				// Should not reach here with new pause logic
 				this.currentScreen = new PauseMenu(this);
+
+				// Pause background music
+				if (this.soundManager) {
+					this.soundManager.pauseBackgroundMusic();
+				}
 				break;
 
 			case GameState.GAME_OVER:
-				// TODO: Show game over screen
+				// Show game over screen
+				this.currentScreen = new GameOverMenu(this);
+
+				// Pause background music (so it can resume on retry)
+				if (this.soundManager) {
+					this.soundManager.pauseBackgroundMusic();
+				}
+				break;
+
+			case GameState.WIN:
+				// Show win screen and unlock next level
+				const nextLevel = this.currentLevelNumber + 1;
+				this.unlockLevel(nextLevel);
+				this.currentScreen = new WinMenu(this);
+
+				// Stop background music
+				if (this.soundManager) {
+					this.soundManager.stopBackgroundMusic();
+				}
 				break;
 		}
+	}
+
+	/**
+	 * Trigger game over state - called when player dies
+	 */
+	gameOver() {
+		this.changeState(GameState.GAME_OVER);
+	}
+
+	/**
+	 * Trigger win state - called when player reaches goal
+	 */
+	playerWin() {
+		this.changeState(GameState.WIN);
 	}
 
 	start() {
