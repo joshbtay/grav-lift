@@ -197,7 +197,7 @@ export class Player {
 			const loadPromises = modelParts.map((part) => {
 				return new Promise((resolve, reject) => {
 					loader.load(
-						`/assets/player/${part}.glb`,
+						`assets/player/${part}.glb`,
 						(gltf) => {
 							this.parts[part] = gltf.scene;
 
