@@ -38,7 +38,7 @@ export default class Lava {
 		this.lights = [];
 		const gridSize = 8; // 8x8 grid of lights for better coverage
 		const spacing = Math.max(width, depth) / gridSize;
-		const lightHeight = yPosition + height / 2 + 10; // Higher above lava surface
+		const lightHeight = yPosition + height / 2 + 15; // Higher above lava surface
 
 		for (let x = 0; x < gridSize; x++) {
 			for (let z = 0; z < gridSize; z++) {

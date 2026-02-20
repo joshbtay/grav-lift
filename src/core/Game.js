@@ -92,8 +92,8 @@ export class Game {
 
 	async loadSounds() {
 		try {
-			await this.soundManager.loadSound('projectile', '/assets/projectile.mp3');
-			await this.soundManager.loadSound('music', '/assets/song.mp3');
+			await this.soundManager.loadSound('projectile', 'assets/projectile.mp3');
+			await this.soundManager.loadSound('music', 'assets/song.mp3');
 		} catch (error) {
 			console.error('Error loading sounds:', error);
 		}
