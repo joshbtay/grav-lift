@@ -1,7 +1,7 @@
 import RAPIER from "@dimforge/rapier3d-compat";
 import * as THREE from "three";
-import Lava from "../entities/Lava.js";
 import GoalIndicator from "../entities/GoalIndicator.js";
+import Lava from "../entities/Lava.js";
 import { Player } from "../entities/Player.js";
 import { Projectile } from "../entities/Projectile.js";
 
@@ -252,7 +252,7 @@ export class BaseLevel {
 		let furthestPlatform = null;
 		let maxDistance = 0;
 
-		this.platforms.forEach(platform => {
+		this.platforms.forEach((platform) => {
 			const platformPos = platform.mesh.position;
 			const dx = platformPos.x - spawnPos.x;
 			const dy = platformPos.y - spawnPos.y;
@@ -273,12 +273,12 @@ export class BaseLevel {
 			this.goalIndicator = new GoalIndicator(this.game.scene, {
 				x: pos.x,
 				y: indicatorY,
-				z: pos.z
+				z: pos.z,
 			});
 
-			console.log('Goal platform set:', {
+			console.log("Goal platform set:", {
 				position: pos,
-				distance: maxDistance
+				distance: maxDistance,
 			});
 		}
 	}
@@ -452,8 +452,10 @@ export class BaseLevel {
 		}
 
 		// Update platforms (only after 20 seconds of music)
-		const musicTime = this.game.soundManager ? this.game.soundManager.getMusicTime() : 0;
-		if (musicTime >= 20) {
+		const musicTime = this.game.soundManager
+			? this.game.soundManager.getMusicTime()
+			: 0;
+		if (musicTime >= 21) {
 			this.platforms.forEach((platform) => platform.update(delta));
 		}
 
@@ -527,9 +529,10 @@ export class BaseLevel {
 		const platformTop = platformPos.y + this.goalPlatform.size.height / 2;
 		const playerBottom = playerPos.y - 0.8; // Bottom of player capsule
 
-		const isOnPlatform = dx <= halfWidth &&
-		                     dz <= halfDepth &&
-		                     Math.abs(playerBottom - platformTop) < 0.5;
+		const isOnPlatform =
+			dx <= halfWidth &&
+			dz <= halfDepth &&
+			Math.abs(playerBottom - platformTop) < 0.5;
 
 		if (isOnPlatform) {
 			this.handlePlayerWin();
@@ -550,7 +553,7 @@ export class BaseLevel {
 			document.exitPointerLock();
 		}
 
-		console.log('Player won!');
+		console.log("Player won!");
 
 		// Trigger win state in game
 		this.game.playerWin();
@@ -580,7 +583,7 @@ export class BaseLevel {
 
 			// Play shoot sound (player shooting - full volume)
 			if (this.game.soundManager) {
-				this.game.soundManager.playSound('projectile', 0.5);
+				this.game.soundManager.playSound("projectile", 0.5);
 			}
 		});
 	}
@@ -878,7 +881,7 @@ export class BaseLevel {
 
 					// Play shoot sound (turret shooting - 50% quieter)
 					if (this.game.soundManager) {
-						this.game.soundManager.playSound('projectile', 0.25);
+						this.game.soundManager.playSound("projectile", 0.25);
 					}
 				});
 			}
@@ -954,7 +957,7 @@ export class BaseLevel {
 
 					// Play collision sound (projectile hit - 50% quieter)
 					if (this.game.soundManager) {
-						this.game.soundManager.playSound('projectile', 0.3);
+						this.game.soundManager.playSound("projectile", 0.3);
 					}
 
 					// Destroy projectile
@@ -1003,7 +1006,7 @@ export class BaseLevel {
 
 				// Play collision sound (projectile hit - 50% quieter)
 				if (this.game.soundManager) {
-					this.game.soundManager.playSound('projectile', 0.3);
+					this.game.soundManager.playSound("projectile", 0.3);
 				}
 
 				// Destroy projectile
