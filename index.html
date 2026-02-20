@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Shooter Game</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      overflow: hidden;
+      font-family: 'Arial', sans-serif;
+    }
+
+    #game-canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #ui-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .ui-text {
+      color: white;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+      pointer-events: auto;
+    }
+
+    #level-select-info {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+
+    #level-select-info h1 {
+      font-size: 48px;
+      margin-bottom: 20px;
+    }
+
+    #level-select-info p {
+      font-size: 20px;
+      opacity: 0.8;
+    }
+
+    #fullscreen-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 50px;
+      height: 50px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 8px;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
+    }
+
+    #fullscreen-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.5);
+      transform: scale(1.1);
+    }
+
+    #fullscreen-btn:active {
+      transform: scale(0.95);
+    }
+
+    #player-customization {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 20px;
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      pointer-events: auto;
+      display: none; /* Hidden by default, shown by LevelSelectMenu */
+    }
+
+    #player-customization label {
+      display: block;
+      color: white;
+      margin-bottom: 8px;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    #player-customization input {
+      width: 200px;
+      padding: 8px 12px;
+      margin-bottom: 15px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      font-size: 16px;
+      font-family: 'Arial', sans-serif;
+    }
+
+    #player-customization input:focus {
+      outline: none;
+      border-color: rgba(78, 204, 163, 0.8);
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    #player-customization input[type="color"] {
+      height: 40px;
+      cursor: pointer;
+      padding: 2px;
+    }
+
+    #player-customization input::placeholder {
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    #crosshair {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 20px;
+      height: 20px;
+      pointer-events: none;
+      display: none; /* Hidden by default, shown during gameplay */
+    }
+
+    #crosshair::before,
+    #crosshair::after {
+      content: '';
+      position: absolute;
+      background: rgba(255, 255, 255, 0.9);
+      box-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
+    }
+
+    #crosshair::before {
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 2px;
+      height: 12px;
+    }
+
+    #crosshair::after {
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 12px;
+      height: 2px;
+    }
+  </style>
+  <script type="module" crossorigin src="/grav-lift/assets/index-Bx_aR0Kh.js"></script>
+</head>
+<body>
+  <canvas id="game-canvas"></canvas>
+  <div id="ui-overlay">
+    <div id="crosshair"></div>
+    <button id="fullscreen-btn" title="Enter Fullscreen (F)">⛶</button>
+    <div id="player-customization" class="ui-text">
+      <label for="player-name">Player Name</label>
+      <input type="text" id="player-name" placeholder="Enter your name" maxlength="20">
+      <label for="player-color">Player Color</label>
+      <input type="color" id="player-color" value="#fa8072">
+    </div>
+    <div id="level-select-info" class="ui-text">
+      <h1>SELECT LEVEL</h1>
+      <p>Click on a level box to begin</p>
+    </div>
+  </div>
+  <script>
+    // Fullscreen toggle functionality
+    const fullscreenBtn = document.getElementById('fullscreen-btn');
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+          console.error('Error attempting to enable fullscreen:', err);
+        });
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
+    // Allow button click
+    fullscreenBtn.addEventListener('click', toggleFullscreen);
+
+    // Allow F key to toggle fullscreen
+    window.addEventListener('keydown', (event) => {
+      if (event.key === 'f' || event.key === 'F') {
+        toggleFullscreen();
+      }
+    });
+
+    // Update button icon based on fullscreen state
+    document.addEventListener('fullscreenchange', () => {
+      if (document.fullscreenElement) {
+        fullscreenBtn.textContent = '⮾'; // Exit fullscreen icon
+        fullscreenBtn.title = 'Exit Fullscreen (F)';
+      } else {
+        fullscreenBtn.textContent = '⛶'; // Enter fullscreen icon
+        fullscreenBtn.title = 'Enter Fullscreen (F)';
+      }
+    });
+  </script>
+</body>
+</html>
